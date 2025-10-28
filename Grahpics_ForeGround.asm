@@ -221,26 +221,33 @@ draw_box_outline:
 
 .globl draw_horizontal_line
 draw_horizontal_line:
-    addi $sp, $sp, -16
+    addi $sp, $sp, -28
     sw   $ra, 0($sp)
     sw   $t0, 4($sp)
     sw   $t1, 8($sp)
     sw   $t2, 12($sp)
+    sw   $t3, 16($sp)
+    sw   $t4, 20($sp)
+    sw   $t5, 24($sp)
 
     move $t0, $a0      # x
     move $t1, $a1      # y
-    move $t2, $a2      # width
+    move $t2, $a2      # width (pixels)
     move $t3, $a3      # color
+
+    blez $t2, dh_done
+
+    li   $t4, 0x10008000   # bitmap base address
+    li   $t5, 512           # screen width in pixels
+    mul  $t5, $t1, $t5      # y * width
+    add  $t5, $t5, $t0      # y*width + x
+    sll  $t5, $t5, 2        # byte offset (4 bytes per pixel)
+    add  $t4, $t4, $t5      # pointer to starting pixel
 
 dh_loop:
     blez $t2, dh_done
-    move $a0, $t0      # syscall args
-    move $a1, $t1
-    move $a2, $t3
-    li   $v0, 32       # Draw pixel
-    syscall
-
-    addi $t0, $t0, 1
+    sw   $t3, 0($t4)        # store pixel color
+    addi $t4, $t4, 4        # advance to next pixel to the right
     addi $t2, $t2, -1
     b    dh_loop
 
@@ -249,7 +256,10 @@ dh_done:
     lw   $t0, 4($sp)
     lw   $t1, 8($sp)
     lw   $t2, 12($sp)
-    addi $sp, $sp, 16
+    lw   $t3, 16($sp)
+    lw   $t4, 20($sp)
+    lw   $t5, 24($sp)
+    addi $sp, $sp, 28
     jr   $ra
 
 
@@ -259,26 +269,36 @@ dh_done:
 
 .globl draw_vertical_line
 draw_vertical_line:
-    addi $sp, $sp, -16
+    addi $sp, $sp, -28
     sw   $ra, 0($sp)
     sw   $t0, 4($sp)
     sw   $t1, 8($sp)
     sw   $t2, 12($sp)
+    sw   $t3, 16($sp)
+    sw   $t4, 20($sp)
+    sw   $t5, 24($sp)
 
     move $t0, $a0      # x
     move $t1, $a1      # y
-    move $t2, $a2      # height
+    move $t2, $a2      # height (pixels)
     move $t3, $a3      # color
+
+    blez $t2, dv_done
+
+    li   $t4, 0x10008000   # bitmap base address
+    li   $t5, 512           # screen width in pixels
+    mul  $t5, $t1, $t5      # y * width
+    add  $t5, $t5, $t0      # y*width + x
+    sll  $t5, $t5, 2        # byte offset
+    add  $t4, $t4, $t5      # pointer to starting pixel
+
+    li   $t5, 512
+    sll  $t5, $t5, 2        # bytes per row (2048)
 
 dv_loop:
     blez $t2, dv_done
-    move $a0, $t0
-    move $a1, $t1
-    move $a2, $t3
-    li   $v0, 32       # Draw pixel
-    syscall
-
-    addi $t1, $t1, 1
+    sw   $t3, 0($t4)        # store pixel color
+    add  $t4, $t4, $t5      # move to pixel directly below
     addi $t2, $t2, -1
     b    dv_loop
 
@@ -287,5 +307,8 @@ dv_done:
     lw   $t0, 4($sp)
     lw   $t1, 8($sp)
     lw   $t2, 12($sp)
-    addi $sp, $sp, 16
+    lw   $t3, 16($sp)
+    lw   $t4, 20($sp)
+    lw   $t5, 24($sp)
+    addi $sp, $sp, 28
     jr   $ra
